@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"sanbercode-go-quiz/middleware"
-
 	"sanbercode-go-quiz/structs"
 	"time"
 
@@ -23,13 +22,18 @@ func CreateBuku(c *gin.Context, db *sql.DB) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON data"})
 		return
 	}
-	if newBuku.Title == "" || newBuku.Description == "" || newBuku.ReleaseYear == 0 || newBuku.TotalPage == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Name, Description, Release Year, dan Total Page tidak boleh kosong"})
+	if newBuku.Title == "" || newBuku.Description == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Title dan Description tidak boleh kosong"})
 		return
 	}
 
+	if newBuku.ReleaseYear == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Release Year tidak boleh kosong"})
+		return
+	}
 	if newBuku.ReleaseYear < 1980 || newBuku.ReleaseYear > 2024 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Release Year tidak boleh kurang dari tahun 1980 atau lebih dari tahun 2024"})
+		return
 	}
 
 	if newBuku.TotalPage < 100 {
