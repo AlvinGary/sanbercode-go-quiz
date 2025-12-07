@@ -32,7 +32,7 @@ func CreateKategori(c *gin.Context, db *sql.DB) {
 	newKategori.CreatedBy = user
 	newKategori.ModifiedAt = now
 	newKategori.ModifiedBy = user
-	query := `INSERT INTO Kategori (name, created_at, created_by, modified_at, modified_by) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	query := `INSERT INTO "Kategori" (name, created_at, created_by, modified_at, modified_by) VALUES ($1, $2, $3, $4, $5) RETURNING id`
 	err := db.QueryRow(query, newKategori.Name, newKategori.CreatedAt, newKategori.CreatedBy, newKategori.ModifiedAt, newKategori.ModifiedBy).Scan(&newKategori.Id)
 	if err != nil {
 		log.Println("Error inserting new Kategori:", err)
@@ -48,7 +48,7 @@ func GetKategori(c *gin.Context, db *sql.DB) {
 	if c.IsAborted() {
 		return
 	}
-	rows, err := db.Query(`SELECT id, name, created_at, created_by, modified_at, modified_by FROM Kategori`)
+	rows, err := db.Query(`SELECT id, name, created_at, created_by, modified_at, modified_by FROM "Kategori"`)
 	if err != nil {
 		log.Println("Error fetching kategori:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data Kategori"})
@@ -77,7 +77,7 @@ func GetKategoriByID(c *gin.Context, db *sql.DB) {
 	}
 	id := c.Param("id")
 	var b structs.Kategori
-	query := `SELECT id, name, created_at, created_by, modified_at, modified_by FROM Kategori WHERE "id" = $1`
+	query := `SELECT id, name, created_at, created_by, modified_at, modified_by FROM "Kategori" WHERE "id" = $1`
 	err := db.QueryRow(query, id).Scan(&b.Id, &b.Name, &b.CreatedAt, &b.CreatedBy, &b.ModifiedAt, &b.ModifiedBy)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -101,7 +101,7 @@ func UpdateKategori(c *gin.Context, db *sql.DB) {
 
 	// Fetch existing record to preserve created_at and created_by
 	var existingKategori structs.Kategori
-	querySelect := `SELECT id, name, created_at, created_by, modified_at, modified_by FROM Kategori WHERE id = $1`
+	querySelect := `SELECT id, name, created_at, created_by, modified_at, modified_by FROM "Kategori" WHERE id = $1`
 	err := db.QueryRow(querySelect, id).Scan(&existingKategori.Id, &existingKategori.Name, &existingKategori.CreatedAt, &existingKategori.CreatedBy, &existingKategori.ModifiedAt, &existingKategori.ModifiedBy)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -134,7 +134,7 @@ func UpdateKategori(c *gin.Context, db *sql.DB) {
 		ModifiedAt: now,
 		ModifiedBy: user,
 	}
-	query := `UPDATE Kategori SET name = $1, modified_at = $2, modified_by = $3 WHERE id = $4`
+	query := `UPDATE "Kategori" SET name = $1, modified_at = $2, modified_by = $3 WHERE id = $4`
 	result, err := db.Exec(query, updatedKategori.Name, updatedKategori.ModifiedAt, updatedKategori.ModifiedBy, id)
 	if err != nil {
 		log.Println("Error updating Kategori:", err)
@@ -158,7 +158,7 @@ func UpdateKategori(c *gin.Context, db *sql.DB) {
 // Endpoint DELETE by ID kategori
 func DeleteKategori(c *gin.Context, db *sql.DB) {
 	id := c.Param("id")
-	query := `DELETE FROM Kategori WHERE id = $1`
+	query := `DELETE FROM "Kategori" WHERE id = $1`
 	result, err := db.Exec(query, id)
 	if err != nil {
 		log.Println("Error deleting Kategori:", err)
