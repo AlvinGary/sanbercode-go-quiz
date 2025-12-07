@@ -25,6 +25,9 @@ func SetupRoutes(router *gin.Engine, db *sql.DB) {
 		kategoriGroup.DELETE("/:id", func(c *gin.Context) {
 			controllers.DeleteKategori(c, db)
 		})
+		kategoriGroup.GET("/:id/books", func(c *gin.Context) {
+			controllers.GetBooksByCategoryId(c, db)
+		})
 	}
 	bukuGroup := router.Group("api/books")
 	{
@@ -36,6 +39,9 @@ func SetupRoutes(router *gin.Engine, db *sql.DB) {
 		})
 		bukuGroup.GET("/:id", func(c *gin.Context) {
 			controllers.GetBukuByID(c, db)
+		})
+		bukuGroup.PUT("/:id", func(c *gin.Context) {
+			controllers.UpdateBuku(c, db)
 		})
 		bukuGroup.DELETE("/:id", func(c *gin.Context) {
 			controllers.DeleteBuku(c, db)

@@ -183,17 +183,69 @@ func DeleteKategori(c *gin.Context, db *sql.DB) {
 	c.JSON(http.StatusOK, gin.H{"message": "Kategori berhasil dihapus"})
 }
 
+func GetBooksByCategoryId(c *gin.Context, db *sql.DB) {
+	middleware.BasicAuth()(c)
+	if c.IsAborted() {
+		return
+	}
 
-// // basic auth middleware
-// func BasicAuth() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		user, password, hasAuth := c.Request.BasicAuth()
-// 		if hasAuth && user == "admin" && password == "root" {
-// 			c.Set("user", user)
-// 			c.Next()
-// 			return
-// 		}
-// 		c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
-// 		c.AbortWithStatus(http.StatusUnauthorized)
-// 	}
-// }
+	categoryID := c.Param("id")
+
+	// Check if category exists
+	var exists bool
+	err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM "Kategori" WHERE id = $1)`, categoryID).Scan(&exists)
+	if err != nil {
+		log.Println("Error checking category:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memeriksa Category ID"})
+		return
+	}
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Category ID tidak valid"})
+		return
+	}
+
+	query := `SELECT id, title, description, image_url, release_year, price, total_page, thickness, category_id, created_at, created_by, modified_at, modified_by FROM "Buku" WHERE category_id = $1`
+	rows, err := db.Query(query, categoryID)
+	if err != nil {
+		log.Println("Error fetching books by category:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data Buku"})
+		return
+	}
+	defer rows.Close()
+
+	// Loop rows → inputed to slice
+	var books []structs.Buku
+	for rows.Next() {
+		var buku structs.Buku
+		err := rows.Scan(
+			&buku.Id,
+			&buku.Title,
+			&buku.Description,
+			&buku.ImageUrl,
+			&buku.ReleaseYear,
+			&buku.Price,
+			&buku.TotalPage,
+			&buku.Thickness,
+			&buku.CategoryId,
+			&buku.CreatedAt,
+			&buku.CreatedBy,
+			&buku.ModifiedAt,
+			&buku.ModifiedBy,
+		)
+		if err != nil {
+			log.Println("Error scanning book:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membaca data Buku"})
+			return
+		}
+		books = append(books, buku)
+	}
+
+	//if there are no books
+	if len(books) == 0 {
+		c.JSON(http.StatusOK, gin.H{"message": "Tidak ada buku pada kategori ini"})
+		return
+	}
+
+	// Return list buku
+	c.JSON(http.StatusOK, books)
+}

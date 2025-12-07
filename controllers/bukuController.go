@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sanbercode-go-quiz/middleware"
 	"sanbercode-go-quiz/structs"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -119,6 +120,152 @@ func GetBukuByID(c *gin.Context, db *sql.DB) {
 		return
 	}
 	c.JSON(http.StatusOK, b)
+}
+
+// Endpoint PUT by ID Buku
+// Endpoint PUT by ID Buku
+func UpdateBuku(c *gin.Context, db *sql.DB) {
+	middleware.BasicAuth()(c)
+	if c.IsAborted() {
+		return
+	}
+	id := c.Param("id")
+
+	// Fetch existing record to preserve created_at and created_by
+	var existingBuku structs.Buku
+	querySelect := `SELECT id, title, description, image_url, release_year, price, total_page, thickness, category_id, created_at, created_by, modified_at, modified_by FROM "Buku" WHERE id = $1`
+	err := db.QueryRow(querySelect, id).Scan(
+		&existingBuku.Id,
+		&existingBuku.Title,
+		&existingBuku.Description,
+		&existingBuku.ImageUrl,
+		&existingBuku.ReleaseYear,
+		&existingBuku.Price,
+		&existingBuku.TotalPage,
+		&existingBuku.Thickness,
+		&existingBuku.CategoryId,
+		&existingBuku.CreatedAt,
+		&existingBuku.CreatedBy,
+		&existingBuku.ModifiedAt,
+		&existingBuku.ModifiedBy,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Buku tidak ditemukan"})
+		} else {
+			log.Println("Error fetching existing Buku:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data Buku"})
+		}
+		return
+	}
+
+	// Input DTO
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		ImageUrl    string `json:"image_url"`
+		ReleaseYear int    `json:"release_year"`
+		Price       int    `json:"price"`
+		TotalPage   int    `json:"total_page"`
+		CategoryId  int    `json:"category_id"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON data"})
+		return
+	}
+
+	// Validation (sama seperti CreateBuku)
+	if input.Title == "" || input.Description == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Title dan Description tidak boleh kosong"})
+		return
+	}
+	if input.ReleaseYear == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Release Year tidak boleh kosong"})
+		return
+	}
+	if input.ReleaseYear < 1980 || input.ReleaseYear > 2024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Release Year tidak boleh kurang dari tahun 1980 atau lebih dari tahun 2024"})
+		return
+	}
+	if input.TotalPage == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Total Page tidak boleh kosong"})
+		return
+	}
+
+	// Thickness conversion
+	if input.TotalPage < 100 {
+		existingBuku.Thickness = "Tipis"
+	} else {
+		existingBuku.Thickness = "Tebal"
+	}
+
+	// Check Category ID exists
+	var exists bool
+	err = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM "Kategori" WHERE id = $1)`, input.CategoryId).Scan(&exists)
+	if err != nil {
+		log.Println("Error checking category:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memeriksa Category ID"})
+		return
+	}
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Category ID tidak valid"})
+		return
+	}
+
+	// Build updated object while preserving created fields
+	now := time.Now()
+	user := c.GetString("user")
+	updatedBuku := structs.Buku{
+		Id:          existingBuku.Id,
+		Title:       input.Title,
+		Description: input.Description,
+		ImageUrl:    input.ImageUrl,
+		ReleaseYear: input.ReleaseYear,
+		Price:       input.Price,
+		TotalPage:   input.TotalPage,
+		Thickness:   existingBuku.Thickness,
+		CategoryId:  input.CategoryId,
+		CreatedAt:   existingBuku.CreatedAt, // preserve
+		CreatedBy:   existingBuku.CreatedBy, // preserve
+		ModifiedAt:  now,
+		ModifiedBy:  user,
+	}
+
+	// Update query (table Buku)
+	queryUpdate := `UPDATE "Buku" SET title = $1, description = $2, image_url = $3, release_year = $4, price = $5, total_page = $6, thickness = $7, category_id = $8, modified_at = $9, modified_by = $10 WHERE id = $11`
+	result, err := db.Exec(queryUpdate,
+		updatedBuku.Title,
+		updatedBuku.Description,
+		updatedBuku.ImageUrl,
+		updatedBuku.ReleaseYear,
+		updatedBuku.Price,
+		updatedBuku.TotalPage,
+		updatedBuku.Thickness,
+		updatedBuku.CategoryId,
+		updatedBuku.ModifiedAt,
+		updatedBuku.ModifiedBy,
+		id,
+	)
+	if err != nil {
+		log.Println("Error updating Buku:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memperbarui Buku"})
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Println("Error getting rows affected:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memperbarui Buku"})
+		return
+	}
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Buku tidak ditemukan"})
+		return
+	}
+
+	// Convert id param to int and set on response object
+	updatedBuku.Id, _ = strconv.Atoi(id)
+	c.JSON(http.StatusOK, updatedBuku)
 }
 
 // Endpoint DELETE by ID Buku
