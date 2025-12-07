@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"sanbercode-go-quiz/middleware"
 	"sanbercode-go-quiz/structs"
 	"strconv"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 // Endpoint POST kategori
 func CreateKategori(c *gin.Context, db *sql.DB) {
-	BasicAuth()(c)
+	middleware.BasicAuth()(c)
 	if c.IsAborted() {
 		return
 	}
@@ -44,7 +45,7 @@ func CreateKategori(c *gin.Context, db *sql.DB) {
 
 // Endpoint GET Kategori
 func GetKategori(c *gin.Context, db *sql.DB) {
-	BasicAuth()(c)
+	middleware.BasicAuth()(c)
 	if c.IsAborted() {
 		return
 	}
@@ -71,7 +72,7 @@ func GetKategori(c *gin.Context, db *sql.DB) {
 
 // Endpoint GET by ID Kategori
 func GetKategoriByID(c *gin.Context, db *sql.DB) {
-	BasicAuth()(c)
+	middleware.BasicAuth()(c)
 	if c.IsAborted() {
 		return
 	}
@@ -93,7 +94,7 @@ func GetKategoriByID(c *gin.Context, db *sql.DB) {
 
 // Endpoint PUT by ID kategori
 func UpdateKategori(c *gin.Context, db *sql.DB) {
-	BasicAuth()(c)
+	middleware.BasicAuth()(c)
 	if c.IsAborted() {
 		return
 	}
@@ -157,6 +158,10 @@ func UpdateKategori(c *gin.Context, db *sql.DB) {
 
 // Endpoint DELETE by ID kategori
 func DeleteKategori(c *gin.Context, db *sql.DB) {
+	middleware.BasicAuth()(c)
+	if c.IsAborted() {
+		return
+	}
 	id := c.Param("id")
 	query := `DELETE FROM "Kategori" WHERE id = $1`
 	result, err := db.Exec(query, id)
@@ -179,16 +184,16 @@ func DeleteKategori(c *gin.Context, db *sql.DB) {
 }
 
 
-// basic auth middleware
-func BasicAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		user, password, hasAuth := c.Request.BasicAuth()
-		if hasAuth && user == "admin" && password == "root" {
-			c.Set("user", user)
-			c.Next()
-			return
-		}
-		c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
-		c.AbortWithStatus(http.StatusUnauthorized)
-	}
-}
+// // basic auth middleware
+// func BasicAuth() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		user, password, hasAuth := c.Request.BasicAuth()
+// 		if hasAuth && user == "admin" && password == "root" {
+// 			c.Set("user", user)
+// 			c.Next()
+// 			return
+// 		}
+// 		c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
+// 		c.AbortWithStatus(http.StatusUnauthorized)
+// 	}
+// }

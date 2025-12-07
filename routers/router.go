@@ -26,4 +26,19 @@ func SetupRoutes(router *gin.Engine, db *sql.DB) {
 			controllers.DeleteKategori(c, db)
 		})
 	}
+	bukuGroup := router.Group("api/books")
+	{
+		bukuGroup.POST("", func(c *gin.Context) {
+			controllers.CreateBuku(c, db)
+		})
+		bukuGroup.GET("", func(c *gin.Context) {
+			controllers.GetBuku(c, db)
+		})
+		bukuGroup.GET("/:id", func(c *gin.Context) {
+			controllers.GetBukuByID(c, db)
+		})
+		bukuGroup.DELETE("/:id", func(c *gin.Context) {
+			controllers.DeleteBuku(c, db)
+		})
+	}
 }
